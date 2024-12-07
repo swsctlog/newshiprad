@@ -28,6 +28,7 @@
         </div>
         <div class="mt-5">
             <button class="btn btn-primary" id="startButton">Запустить распознавание</button>
+            <button class="btn btn-danger" id="stopButton">Остановить распознавание</button>
         </div>
     </div>
 
@@ -37,33 +38,20 @@
             alert('Ваш браузер не поддерживает SpeechRecognition. Попробуйте Google Chrome.');
         } else {
             // Ключевые слова
-            const keywords = ['открой сайт', 'ключевое слово', 'браузер'];
+            const keywords = ['открой ютуб', 'youtube', 'запусти видео'];
 
             // Инициализация SpeechRecognition
             const recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
             recognition.lang = 'ru-RU';
             recognition.interimResults = false;
-            recognition.continuous = true;
+            recognition.continuous = true; // Непрерывное прослушивание
 
             const statusElement = document.getElementById('status');
             const outputElement = document.getElementById('output');
             const startButton = document.getElementById('startButton');
+            const stopButton = document.getElementById('stopButton');
 
-            async function startRecognition() {
-    try {
-        // Проверяем доступ к микрофону
-        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-        stream.getTracks().forEach(track => track.stop()); // Останавливаем поток, так как он нужен только для проверки
-        recognition.start();
-        statusElement.textContent = 'Слушаю...';
-        statusElement.style.color = '#007bff';
-    } catch (error) {
-        statusElement.textContent = 'Ошибка доступа к микрофону!';
-        statusElement.style.color = 'red';
-        console.error('Ошибка доступа к микрофону:', error);
-    }
-}
-
+            let isListening = false;
 
             // Обработчик распознанной речи
             recognition.onresult = (event) => {
@@ -75,7 +63,7 @@
                     if (transcript.includes(keyword)) {
                         statusElement.textContent = 'Ключевое слово найдено!';
                         statusElement.style.color = 'green';
-                        window.open('https://example.com', '_blank'); // Открывает сайт
+                        window.open('https://www.youtube.com', '_blank'); // Открывает YouTube
                         return;
                     }
                 }
@@ -87,27 +75,51 @@
             // Обработчик ошибок
             recognition.onerror = (event) => {
                 outputElement.textContent = `Ошибка распознавания: ${event.error}`;
-                statusElement.textContent = 'Ошибка! Проверьте настройки.';
+                statusElement.textContent = 'Ошибка! Перезапуск...';
                 statusElement.style.color = 'red';
+
+                if (isListening) {
+                    restartRecognition();
+                }
             };
 
             // Перезапуск при остановке
             recognition.onend = () => {
-                statusElement.textContent = 'Прослушивание остановлено. Нажмите снова, чтобы начать.';
-                statusElement.style.color = 'red';
+                if (isListening) {
+                    restartRecognition();
+                }
             };
 
-            // Запуск распознавания речи
-            startButton.addEventListener('click', () => {
+            // Функция запуска распознавания
+            function startRecognition() {
                 try {
                     recognition.start();
+                    isListening = true;
                     statusElement.textContent = 'Слушаю...';
                     statusElement.style.color = '#007bff';
                 } catch (error) {
                     outputElement.textContent = `Ошибка запуска: ${error.message}`;
                     statusElement.style.color = 'red';
                 }
-            });
+            }
+
+            // Функция остановки распознавания
+            function stopRecognition() {
+                recognition.stop();
+                isListening = false;
+                statusElement.textContent = 'Распознавание остановлено.';
+                statusElement.style.color = 'red';
+            }
+
+            // Перезапуск
+            function restartRecognition() {
+                recognition.stop();
+                recognition.start();
+            }
+
+            // Обработчики кнопок
+            startButton.addEventListener('click', startRecognition);
+            stopButton.addEventListener('click', stopRecognition);
         }
     </script>
 </body>
