@@ -30,6 +30,10 @@
             <button class="btn btn-primary" id="startButton">Запустить распознавание</button>
             <button class="btn btn-danger" id="stopButton">Остановить распознавание</button>
         </div>
+        <div class="mt-4">
+            <input type="text" class="form-control w-50 d-inline-block" id="textInput" placeholder="Введите текст">
+            <button class="btn btn-success" id="submitButton">Отправить</button>
+        </div>
     </div>
 
     <script>
@@ -50,26 +54,31 @@
             const outputElement = document.getElementById('output');
             const startButton = document.getElementById('startButton');
             const stopButton = document.getElementById('stopButton');
+            const textInput = document.getElementById('textInput');
+            const submitButton = document.getElementById('submitButton');
 
             let isListening = false;
 
-            // Обработчик распознанной речи
-            recognition.onresult = (event) => {
-                const transcript = event.results[event.results.length - 1][0].transcript.trim().toLowerCase();
-                outputElement.textContent = `Распознанный текст: ${transcript}`;
-
-                // Проверка на ключевые слова
+            // Проверка текста на ключевые слова
+            function checkForKeywords(text) {
+                text = text.toLowerCase();
                 for (let keyword of keywords) {
-                    if (transcript.includes(keyword)) {
+                    if (text.includes(keyword)) {
+                        outputElement.textContent = `Ключевое слово найдено: ${text}`;
                         statusElement.textContent = 'Ключевое слово найдено!';
                         statusElement.style.color = 'green';
                         window.open('https://www.youtube.com', '_blank'); // Открывает YouTube
-                        return;
+                        return true; // Остановка проверки после нахождения первого совпадения
                     }
                 }
+                return false;
+            }
 
-                statusElement.textContent = 'Ожидаю команду...';
-                statusElement.style.color = '#007bff';
+            // Обработчик распознанной речи
+            recognition.onresult = (event) => {
+                const transcript = event.results[event.results.length - 1][0].transcript.trim();
+                outputElement.textContent = `Распознанный текст: ${transcript}`;
+                checkForKeywords(transcript);
             };
 
             // Обработчик ошибок
@@ -113,9 +122,26 @@
 
             // Перезапуск
             function restartRecognition() {
-                recognition.stop();
-                recognition.start();
+                console.log('Перезапуск распознавания...');
+                try {
+                    recognition.start();
+                } catch (error) {
+                    console.error('Ошибка при перезапуске:', error);
+                }
             }
+
+            // Обработчик кнопки отправки текста
+            submitButton.addEventListener('click', () => {
+                const textValue = textInput.value.trim();
+                if (textValue) {
+                    const isKeywordFound = checkForKeywords(textValue);
+                    if (!isKeywordFound) {
+                        alert(`Текст отправлен: ${textValue}`);
+                    }
+                } else {
+                    alert('Введите текст перед отправкой!');
+                }
+            });
 
             // Обработчики кнопок
             startButton.addEventListener('click', startRecognition);
