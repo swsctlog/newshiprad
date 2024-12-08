@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="ru">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -9,9 +10,11 @@
         body {
             background-color: #f8f9fa;
         }
+
         .container {
             margin-top: 50px;
         }
+
         .status {
             font-size: 1.5rem;
             font-weight: bold;
@@ -19,6 +22,7 @@
         }
     </style>
 </head>
+
 <body>
     <div class="container text-center">
         <h1 class="mb-4">Голосовой Ассистент</h1>
@@ -43,34 +47,26 @@
         } else {
             // Ключевые слова и их голосовые ответы
             const keywords = {
-                'свод': 'Открыл данные Свод, сэр.',
-                'свот': 'Открыл анализ Свод, сэр.',
-                
-                'часовой': 'Открыл часовые данные, сэр.',
-                'часовой анализ': 'Открыл часовой анализ, сэр.',
+                'свод': 'Открыл данные, сэр.',
+                'свот': 'Открыл анализ, сэр.',
 
-                'снип': 'Открыл данные снип, сэр.',
-                'сниб': 'Открыл анализ снип, сэр.',
+                'часовой': 'Открыл данные, сэр.',
+                'часовой анализ': 'Открыл анализ, сэр.',
 
-                'разбивку': 'Открыл данные разбивки, сэр.',
-                'разбивка': 'Открыл анализ разбивки, сэр.',
-                'разбивка по стятьям': 'Открыл данные разбивки по статьям, сэр.',
-                'разбивку по статьям': 'Открыл анализ разбивки по статьям, сэр.',
+                'снип': 'Открыл данные, сэр.',
+                'сниб': 'Открыл анализ, сэр.',
 
-                'добыча': 'Открыл данные добычи, сэр.',
-                'добычу': 'Открыл анализ добычи, сэр.',
-                'ежедневная добыча': 'Открыл данные ежеднневной добычи, сэр.',
-                'ежедневную добычу': 'Открыл анализ ежедневной добычи, сэр.',
+                'разбивку': 'Открыл данные, сэр.',
+                'разбивка': 'Открыл анализ, сэр.',
 
-                'давление': 'Открыл данные добычи, сэр.',
-                'давлению': 'Открыл анализ добычи, сэр.',
-                'давление шахт': 'Открыл данные давлений шахт, сэр.',
-                'давления шахт': 'Открыл анализ давления шахт, сэр.',
-                
-                'мероприятие': 'Открыл данные мероприятий, сэр.',
-                'мероприятия': 'Открыл анализ мероприятий, сэр.',
-                'геологические технические мероприятия': 'Открыл данные геологических мероприятий, сэр.',
-                'технические мероприятия': 'Открыл анализ технических мероприятий, сэр.',
+                'добыча': 'Открыл данные, сэр.',
+                'добычу': 'Открыл анализ, сэр.',
+
+                'давление': 'Открыл данные, сэр.',
+                'давлению': 'Открыл анализ , сэр.',
+
+                'мероприятие': 'Открыл данные, сэр.',
+                'мероприятия': 'Открыл анализ, сэр.',
 
                 'феликс': 'Да, сэр?'
             };
@@ -104,7 +100,7 @@
                 // Получаем список доступных голосов
                 const voices = synth.getVoices();
                 // Находим голос с наиболее естественным звучанием
-                const preferredVoice = voices.find(voice => 
+                const preferredVoice = voices.find(voice =>
                     voice.lang === 'ru-RU' && voice.name.includes('Google')
                 );
 
@@ -130,9 +126,22 @@
                         speak(keywords[keyword]);
 
                         // Открыть YouTube, если ключевое слово связано с YouTube
-                        if (keyword.includes('ютуб') || keyword.includes('youtube')) {
-                            window.open('https://www.youtube.com', '_blank');
+                        if (keyword.includes('свод') || keyword.includes('свот')) {
+                            window.open('https://lookerstudio.google.com/embed/reporting/150c3245-728e-484a-950b-fb74a73c9b9c/page/p_cqe8vg9fnd', '_blank'); // Замените на нужный URL для "свод" или "свот"
+                        } else if (keyword.includes('часовой') || keyword.includes('часовую')) {
+                            window.open('https://lookerstudio.google.com/embed/reporting/150c3245-728e-484a-950b-fb74a73c9b9c/page/iqA7D', '_blank'); // Замените на нужный URL для "часовой" или "часовую"
+                        } else if (keyword.includes('снип') || keyword.includes('сниб')) {
+                            window.open('https://lookerstudio.google.com/embed/reporting/150c3245-728e-484a-950b-fb74a73c9b9c/page/p_bvny49sqmd', '_blank'); // Замените на нужный URL для "снип" или "сниб"
+                        } else if (keyword.includes('разбивка') || keyword.includes('разбивку')) {
+                            window.open('https://lookerstudio.google.com/embed/reporting/150c3245-728e-484a-950b-fb74a73c9b9c/page/p_xcxkqhvxjd', '_blank'); // Замените на нужный URL для "разбивка" или "разбивку"
+                        } else if (keyword.includes('добыча') || keyword.includes('добычу')) {
+                            window.open('https://lookerstudio.google.com/embed/reporting/150c3245-728e-484a-950b-fb74a73c9b9c/page/p_9tym4mgrkd', '_blank'); // Замените на нужный URL для "добыча" или "добычу"
+                        } else if (keyword.includes('давление') || keyword.includes('давлению')) {
+                            window.open('https://lookerstudio.google.com/embed/reporting/150c3245-728e-484a-950b-fb74a73c9b9c/page/p_7oca1c78ld', '_blank'); // Замените на нужный URL для "давление" или "давлению"
+                        } else if (keyword.includes('мероприятия') || keyword.includes('мероприятие')) {
+                            window.open('https://lookerstudio.google.com/embed/reporting/150c3245-728e-484a-950b-fb74a73c9b9c/page/p_w6smv8z3md', '_blank'); // Замените на нужный URL для "мероприятия" или "мероприятие"
                         }
+
                         return true; // Остановка проверки после нахождения первого совпадения
                     }
                 }
@@ -214,4 +223,5 @@
         }
     </script>
 </body>
+
 </html>
