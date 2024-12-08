@@ -64,11 +64,30 @@
 
             let isListening = false;
 
-            // Функция воспроизведения голоса
+            // Функция воспроизведения голоса с настройкой параметров
             function speak(text) {
                 const synth = window.speechSynthesis;
                 const utterance = new SpeechSynthesisUtterance(text);
+
+                // Настройка параметров
                 utterance.lang = 'ru-RU'; // Язык для воспроизведения
+                utterance.rate = 1; // Скорость речи
+                utterance.pitch = 1; // Тональность
+                utterance.volume = 1; // Громкость
+
+                // Получаем список доступных голосов
+                const voices = synth.getVoices();
+                // Находим голос с наиболее естественным звучанием
+                const preferredVoice = voices.find(voice => 
+                    voice.lang === 'ru-RU' && voice.name.includes('Google')
+                );
+
+                // Устанавливаем голос, если доступен
+                if (preferredVoice) {
+                    utterance.voice = preferredVoice;
+                }
+
+                // Проигрываем текст
                 synth.speak(utterance);
             }
 
