@@ -41,8 +41,13 @@
         if (!('SpeechRecognition' in window || 'webkitSpeechRecognition' in window)) {
             alert('Ваш браузер не поддерживает SpeechRecognition. Попробуйте Google Chrome.');
         } else {
-            // Ключевые слова
-            const keywords = ['открой ютуб', 'youtube', 'запусти видео'];
+            // Ключевые слова и их голосовые ответы
+            const keywords = {
+                'открой ютуб': 'Открыл YouTube, сэр.',
+                'youtube': 'Открыл YouTube, сэр.',
+                'запусти видео': 'Открыл YouTube, сэр.',
+                'феликс': 'Да, сэр?'
+            };
 
             // Инициализация SpeechRecognition
             const recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
@@ -59,15 +64,30 @@
 
             let isListening = false;
 
+            // Функция воспроизведения голоса
+            function speak(text) {
+                const synth = window.speechSynthesis;
+                const utterance = new SpeechSynthesisUtterance(text);
+                utterance.lang = 'ru-RU'; // Язык для воспроизведения
+                synth.speak(utterance);
+            }
+
             // Проверка текста на ключевые слова
             function checkForKeywords(text) {
                 text = text.toLowerCase();
-                for (let keyword of keywords) {
+                for (let keyword in keywords) {
                     if (text.includes(keyword)) {
                         outputElement.textContent = `Ключевое слово найдено: ${text}`;
                         statusElement.textContent = 'Ключевое слово найдено!';
                         statusElement.style.color = 'green';
-                        window.open('https://www.youtube.com', '_blank'); // Открывает YouTube
+
+                        // Голосовой ответ
+                        speak(keywords[keyword]);
+
+                        // Открыть YouTube, если ключевое слово связано с YouTube
+                        if (keyword.includes('ютуб') || keyword.includes('youtube')) {
+                            window.open('https://www.youtube.com', '_blank');
+                        }
                         return true; // Остановка проверки после нахождения первого совпадения
                     }
                 }
