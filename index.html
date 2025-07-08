@@ -1,227 +1,225 @@
 <!DOCTYPE html>
 <html lang="ru">
-
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Голосовой Ассистент</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
+    <title>Обнаружение лиц в реальном времени</title>
+    <!-- Подключаем Tailwind CSS для стилизации -->
+    <script src="https://cdn.tailwindcss.com"></script>
     <style>
+        /* Дополнительные стили для красивого внешнего вида */
         body {
-            background-color: #f8f9fa;
+            font-family: 'Inter', sans-serif;
         }
-
-        .container {
-            margin-top: 50px;
+        .loader {
+            border-top-color: #3498db;
+            -webkit-animation: spin 1s linear infinite;
+            animation: spin 1s linear infinite;
         }
-
-        .status {
-            font-size: 1.5rem;
-            font-weight: bold;
-            color: #007bff;
+        @-webkit-keyframes spin {
+            0% { -webkit-transform: rotate(0deg); }
+            100% { -webkit-transform: rotate(360deg); }
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
         }
     </style>
 </head>
+<body class="bg-gray-900 text-white flex flex-col items-center justify-center min-h-screen p-4">
 
-<body>
-    <div class="container text-center">
-        <h1 class="mb-4">Голосовой Ассистент</h1>
-        <p class="status" id="status">Подключение...</p>
-        <div class="alert alert-info mt-4" id="output">
-            Ожидаю команду...
+    <div class="w-full max-w-3xl bg-gray-800 rounded-2xl shadow-xl p-6 md:p-8 text-center">
+        <h1 class="text-3xl md:text-4xl font-bold text-cyan-400 mb-4">Обнаружение лиц</h1>
+        <p class="text-gray-400 mb-6">Эта страница использует OpenCV.js для анализа видео с вашей веб-камеры в реальном времени.</p>
+
+        <!-- Контейнер для видео и статуса -->
+        <div class="relative w-full aspect-video bg-gray-900 rounded-lg overflow-hidden shadow-inner">
+            <!-- Элемент для отображения видео с камеры -->
+            <video id="videoInput" class="absolute top-0 left-0 w-full h-full object-cover" playsinline autoplay muted style="transform: scaleX(-1);"></video>
+            
+            <!-- Canvas, на котором будет отрисовываться результат -->
+            <canvas id="canvasOutput" class="absolute top-0 left-0 w-full h-full object-cover" style="transform: scaleX(-1);"></canvas>
+            
+            <!-- Индикатор статуса и загрузки -->
+            <div id="statusContainer" class="absolute inset-0 flex flex-col items-center justify-center bg-gray-900 bg-opacity-80 transition-opacity duration-500">
+                <div id="loader" class="loader ease-linear rounded-full border-4 border-t-4 border-gray-500 h-12 w-12 mb-4"></div>
+                <p id="status" class="text-lg font-medium text-gray-300">Загрузка OpenCV.js...</p>
+                <p id="status-details" class="text-sm text-gray-500 mt-1"></p>
+            </div>
         </div>
-        <div class="mt-5">
-            <button class="btn btn-primary" id="startButton">Запустить распознавание</button>
-            <button class="btn btn-danger" id="stopButton">Остановить распознавание</button>
-        </div>
-        <div class="mt-4">
-            <input type="text" class="form-control w-50 d-inline-block" id="textInput" placeholder="Введите текст">
-            <button class="btn btn-success" id="submitButton">Отправить</button>
+        <div class="mt-4 text-xs text-gray-500">
+            <p>Вся обработка происходит в вашем браузере. Данные с камеры никуда не отправляются.</p>
         </div>
     </div>
 
-    <script>
-        // Проверяем поддержку SpeechRecognition
-        if (!('SpeechRecognition' in window || 'webkitSpeechRecognition' in window)) {
-            alert('Ваш браузер не поддерживает SpeechRecognition. Попробуйте Google Chrome.');
-        } else {
-            // Ключевые слова и их голосовые ответы
-            const keywords = {
-                'свод': 'Открыл данные, сэр.',
-                'свот': 'Открыл анализ, сэр.',
+    <!-- Подключение OpenCV.js -->
+    <script async src="https://docs.opencv.org/4.9.0/opencv.js" onload="onOpenCvReady();" type="text/javascript"></script>
 
-                'часовой': 'Открыл данные, сэр.',
-                'часовой анализ': 'Открыл анализ, сэр.',
+    <script type="text/javascript">
+        // Получаем доступ к HTML элементам
+        const video = document.getElementById('videoInput');
+        const canvasOutput = document.getElementById('canvasOutput');
+        const statusContainer = document.getElementById('statusContainer');
+        const statusEl = document.getElementById('status');
+        const statusDetailsEl = document.getElementById('status-details');
+        const loader = document.getElementById('loader');
 
-                'снип': 'Открыл данные, сэр.',
-                'сниб': 'Открыл анализ, сэр.',
+        // Функция для обновления статуса на экране
+        function updateStatus(text, details = '') {
+            statusEl.textContent = text;
+            statusDetailsEl.textContent = details;
+            console.log(text, details);
+        }
 
-                'разбивку': 'Открыл данные, сэр.',
-                'разбивка': 'Открыл анализ, сэр.',
-
-                'добыча': 'Открыл данные, сэр.',
-                'добычу': 'Открыл анализ, сэр.',
-
-                'давление': 'Открыл данные, сэр.',
-                'давлению': 'Открыл анализ , сэр.',
-
-                'мероприятие': 'Открыл данные, сэр.',
-                'мероприятия': 'Открыл анализ, сэр.',
-
-                'феликс': 'Да, сэр?'
-            };
-
-            // Инициализация SpeechRecognition
-            const recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
-            recognition.lang = 'ru-RU';
-            recognition.interimResults = false;
-            recognition.continuous = true; // Непрерывное прослушивание
-
-            const statusElement = document.getElementById('status');
-            const outputElement = document.getElementById('output');
-            const startButton = document.getElementById('startButton');
-            const stopButton = document.getElementById('stopButton');
-            const textInput = document.getElementById('textInput');
-            const submitButton = document.getElementById('submitButton');
-
-            let isListening = false;
-
-            // Функция воспроизведения голоса с настройкой параметров
-            function speak(text) {
-                const synth = window.speechSynthesis;
-                const utterance = new SpeechSynthesisUtterance(text);
-
-                // Настройка параметров
-                utterance.lang = 'ru-RU'; // Язык для воспроизведения
-                utterance.rate = 1; // Скорость речи
-                utterance.pitch = 1; // Тональность
-                utterance.volume = 1; // Громкость
-
-                // Получаем список доступных голосов
-                const voices = synth.getVoices();
-                // Находим голос с наиболее естественным звучанием
-                const preferredVoice = voices.find(voice =>
-                    voice.lang === 'ru-RU' && voice.name.includes('Google')
-                );
-
-                // Устанавливаем голос, если доступен
-                if (preferredVoice) {
-                    utterance.voice = preferredVoice;
-                }
-
-                // Проигрываем текст
-                synth.speak(utterance);
+        // Эта функция будет вызвана, когда opencv.js загрузится
+        async function onOpenCvReady() {
+            if (typeof cv === 'undefined' || typeof cv.Mat === 'undefined') {
+                setTimeout(onOpenCvReady, 50);
+                return;
             }
+            updateStatus('OpenCV.js загружен.');
+            
+            const cascadeFileName = 'haarcascade_frontalface_default.xml';
+            const cascadeFileUrl = `https://raw.githubusercontent.com/opencv/opencv/master/data/haarcascades/${cascadeFileName}`;
 
-            // Проверка текста на ключевые слова
-            function checkForKeywords(text) {
-                text = text.toLowerCase();
-                for (let keyword in keywords) {
-                    if (text.includes(keyword)) {
-                        outputElement.textContent = `Ключевое слово найдено: ${text}`;
-                        statusElement.textContent = 'Ключевое слово найдено!';
-                        statusElement.style.color = 'green';
+            try {
+                updateStatus('Загрузка модели для распознавания лиц...', `(файл ${cascadeFileName})`);
+                
+                const response = await fetch(cascadeFileUrl);
+                if (!response.ok) throw new Error(`Ошибка при загрузке модели: ${response.statusText}`);
+                const buffer = await response.arrayBuffer();
+                const data = new Uint8Array(buffer);
+                cv.FS_createDataFile('/', cascadeFileName, data, true, false, false);
 
-                        // Голосовой ответ
-                        speak(keywords[keyword]);
+                updateStatus('Модель успешно загружена.');
+                await startCamera(cascadeFileName);
 
-                        // Открыть YouTube, если ключевое слово связано с YouTube
-                        if (keyword.includes('свод') || keyword.includes('свот')) {
-                            window.open('https://lookerstudio.google.com/embed/reporting/150c3245-728e-484a-950b-fb74a73c9b9c/page/p_cqe8vg9fnd', '_blank'); // Замените на нужный URL для "свод" или "свот"
-                        } else if (keyword.includes('часовой') || keyword.includes('часовую')) {
-                            window.open('https://lookerstudio.google.com/embed/reporting/150c3245-728e-484a-950b-fb74a73c9b9c/page/iqA7D', '_blank'); // Замените на нужный URL для "часовой" или "часовую"
-                        } else if (keyword.includes('снип') || keyword.includes('сниб')) {
-                            window.open('https://lookerstudio.google.com/embed/reporting/150c3245-728e-484a-950b-fb74a73c9b9c/page/p_bvny49sqmd', '_blank'); // Замените на нужный URL для "снип" или "сниб"
-                        } else if (keyword.includes('разбивка') || keyword.includes('разбивку')) {
-                            window.open('https://lookerstudio.google.com/embed/reporting/150c3245-728e-484a-950b-fb74a73c9b9c/page/p_xcxkqhvxjd', '_blank'); // Замените на нужный URL для "разбивка" или "разбивку"
-                        } else if (keyword.includes('добыча') || keyword.includes('добычу')) {
-                            window.open('https://lookerstudio.google.com/embed/reporting/150c3245-728e-484a-950b-fb74a73c9b9c/page/p_9tym4mgrkd', '_blank'); // Замените на нужный URL для "добыча" или "добычу"
-                        } else if (keyword.includes('давление') || keyword.includes('давлению')) {
-                            window.open('https://lookerstudio.google.com/embed/reporting/150c3245-728e-484a-950b-fb74a73c9b9c/page/p_7oca1c78ld', '_blank'); // Замените на нужный URL для "давление" или "давлению"
-                        } else if (keyword.includes('мероприятия') || keyword.includes('мероприятие')) {
-                            window.open('https://lookerstudio.google.com/embed/reporting/150c3245-728e-484a-950b-fb74a73c9b9c/page/p_w6smv8z3md', '_blank'); // Замените на нужный URL для "мероприятия" или "мероприятие"
-                        }
-
-                        return true; // Остановка проверки после нахождения первого совпадения
-                    }
-                }
-                return false;
+            } catch (error) {
+                console.error(error);
+                updateStatus('Ошибка при загрузке модели.', 'Пожалуйста, проверьте консоль для деталей.');
+                loader.style.display = 'none';
             }
+        }
 
-            // Обработчик распознанной речи
-            recognition.onresult = (event) => {
-                const transcript = event.results[event.results.length - 1][0].transcript.trim();
-                outputElement.textContent = `Распознанный текст: ${transcript}`;
-                checkForKeywords(transcript);
-            };
+        async function startCamera(cascadeFileName) {
+            try {
+                updateStatus('Запрос доступа к камере...');
+                console.log("Requesting user media...");
+                
+                const stream = await navigator.mediaDevices.getUserMedia({ video: { width: 640, height: 480 }, audio: false });
+                
+                console.log("User media stream obtained.");
+                updateStatus('Камера найдена, запускаем видео...');
 
-            // Обработчик ошибок
-            recognition.onerror = (event) => {
-                outputElement.textContent = `Ошибка распознавания: ${event.error}`;
-                statusElement.textContent = 'Ошибка! Перезапуск...';
-                statusElement.style.color = 'red';
+                video.srcObject = stream;
+                
+                video.addEventListener('canplay', () => {
+                    if (window.processingStarted) return;
+                    window.processingStarted = true;
 
-                if (isListening) {
-                    restartRecognition();
+                    console.log("Video is ready to play ('canplay' event fired).");
+                    updateStatus('Камера активна.');
+                    statusContainer.style.opacity = '0';
+                    setTimeout(() => statusContainer.style.display = 'none', 500);
+                    
+                    processVideo(cascadeFileName);
+                }, { once: true });
+
+            } catch (error) {
+                console.error('Ошибка при доступе к камере:', error);
+                let errorMessage = 'Пожалуйста, разрешите доступ в настройках браузера.';
+                if (error.name === 'NotAllowedError') {
+                    errorMessage = 'Вы отклонили запрос на доступ к камере.';
+                } else if (error.name === 'NotFoundError') {
+                    errorMessage = 'Камера не найдена на вашем устройстве.';
                 }
-            };
+                updateStatus('Не удалось получить доступ к камере.', errorMessage);
+                loader.style.display = 'none';
+            }
+        }
 
-            // Перезапуск при остановке
-            recognition.onend = () => {
-                if (isListening) {
-                    restartRecognition();
-                }
-            };
+        function processVideo(cascadeFileName) {
+            // Инициализируем классификатор и VideoCapture один раз
+            const faceCascade = new cv.CascadeClassifier();
+            faceCascade.load(cascadeFileName);
+            const cap = new cv.VideoCapture(video);
 
-            // Функция запуска распознавания
-            function startRecognition() {
+            // Объявляем переменные для матриц и других данных
+            let src;
+            let gray;
+            const faces = new cv.RectVector();
+            const FPS = 30;
+            let lastWidth = 0;
+            let lastHeight = 0;
+
+            function detectFaces() {
+                const begin = Date.now();
                 try {
-                    recognition.start();
-                    isListening = true;
-                    statusElement.textContent = 'Слушаю...';
-                    statusElement.style.color = '#007bff';
-                } catch (error) {
-                    outputElement.textContent = `Ошибка запуска: ${error.message}`;
-                    statusElement.style.color = 'red';
-                }
-            }
+                    const currentWidth = video.videoWidth;
+                    const currentHeight = video.videoHeight;
 
-            // Функция остановки распознавания
-            function stopRecognition() {
-                recognition.stop();
-                isListening = false;
-                statusElement.textContent = 'Распознавание остановлено.';
-                statusElement.style.color = 'red';
-            }
-
-            // Перезапуск
-            function restartRecognition() {
-                console.log('Перезапуск распознавания...');
-                try {
-                    recognition.start();
-                } catch (error) {
-                    console.error('Ошибка при перезапуске:', error);
-                }
-            }
-
-            // Обработчик кнопки отправки текста
-            submitButton.addEventListener('click', () => {
-                const textValue = textInput.value.trim();
-                if (textValue) {
-                    const isKeywordFound = checkForKeywords(textValue);
-                    if (!isKeywordFound) {
-                        alert(`Текст отправлен: ${textValue}`);
+                    // Ждем, пока у видео появятся стабильные размеры
+                    if (currentWidth === 0 || currentHeight === 0) {
+                        const delay = 1000 / FPS - (Date.now() - begin);
+                        setTimeout(detectFaces, delay > 0 ? delay : 0);
+                        return;
                     }
-                } else {
-                    alert('Введите текст перед отправкой!');
-                }
-            });
 
-            // Обработчики кнопок
-            startButton.addEventListener('click', startRecognition);
-            stopButton.addEventListener('click', stopRecognition);
+                    // Если размер видео изменился, пересоздаем матрицы
+                    if (lastWidth !== currentWidth || lastHeight !== currentHeight) {
+                        // Удаляем старые матрицы
+                        if (src) src.delete();
+                        if (gray) gray.delete();
+                        
+                        // Обновляем размеры
+                        lastWidth = currentWidth;
+                        lastHeight = currentHeight;
+                        canvasOutput.width = lastWidth;
+                        canvasOutput.height = lastHeight;
+
+                        // Создаем матрицы с новыми, правильными размерами
+                        src = new cv.Mat(lastHeight, lastWidth, cv.CV_8UC4);
+                        gray = new cv.Mat(lastHeight, lastWidth, cv.CV_8UC1);
+                        console.log(`Матрицы OpenCV пересозданы: ${lastWidth}x${lastHeight}`);
+                    }
+
+                    // Читаем кадр в матрицу `src`
+                    cap.read(src);
+
+                    if (src.empty()) {
+                        const delay = 1000 / FPS - (Date.now() - begin);
+                        setTimeout(detectFaces, delay > 0 ? delay : 0);
+                        return;
+                    }
+                    
+                    cv.cvtColor(src, gray, cv.COLOR_RGBA2GRAY, 0);
+                    faceCascade.detectMultiScale(gray, faces, 1.1, 5, 0, new cv.Size(30, 30));
+                    
+                    for (let i = 0; i < faces.size(); ++i) {
+                        const face = faces.get(i);
+                        const point1 = new cv.Point(face.x, face.y);
+                        const point2 = new cv.Point(face.x + face.width, face.y + face.height);
+                        cv.rectangle(src, point1, point2, [0, 255, 0, 255], 2);
+                    }
+                    
+                    cv.imshow('canvasOutput', src);
+                    
+                    const delay = 1000 / FPS - (Date.now() - begin);
+                    setTimeout(detectFaces, delay > 0 ? delay : 0);
+
+                } catch (err) {
+                    console.error("Ошибка в цикле обработки:", err);
+                    updateStatus('Произошла ошибка.', 'Обновите страницу, чтобы попробовать снова.');
+                    // Очищаем ресурсы при фатальной ошибке
+                    if (src) src.delete();
+                    if (gray) gray.delete();
+                    // `cap` не имеет метода delete, поэтому его не удаляем
+                    faces.delete();
+                    faceCascade.delete();
+                }
+            }
+            detectFaces();
         }
     </script>
 </body>
-
 </html>
