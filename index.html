@@ -39,6 +39,10 @@
             color: #198754; /* Зеленый цвет */
             font-weight: bold;
         }
+        .error-msg {
+            color: #dc3545;
+            font-size: 0.9rem;
+        }
         .spinner-border {
             width: 1.2rem;
             height: 1.2rem;
@@ -117,6 +121,14 @@
             }
         }
 
+        // Функция для отображения ошибок
+        function displayError(message) {
+             const fields = ['ip-address', 'vpn-status', 'location', 'isp'];
+             fields.forEach(id => {
+                 displayData(id, message, 'error-msg');
+             });
+        }
+
         // Функция для получения и отображения всей информации
         async function fetchAndDisplayInfo() {
             // 1. Получаем данные, доступные прямо в браузере
@@ -128,39 +140,33 @@
             displayData('timezone', timeZone);
             displayData('user-agent', userAgent);
 
-            // 2. Делаем запрос к внешнему API ipwho.is
+            // 2. Делаем запрос к внешнему API
             try {
-                // Используем CORS-прокси для обхода блокировок в среде выполнения
-                const apiUrl = 'https://api.allorigins.win/raw?url=https://ipwho.is/';
+                // ИСПРАВЛЕНО: Указан правильный URL с поддоменом "free."
+                const apiUrl = `https://free.freeipapi.com/api/json/`;
                 const response = await fetch(apiUrl);
-                // Ответ от прокси приходит как текст, его нужно вручную преобразовать в JSON
-                const data = JSON.parse(await response.text());
-
-                if (data.success) {
-                    // Обрабатываем ответ
-                    displayData('ip-address', data.ip);
-                    displayData('location', `${data.country}, ${data.city}`);
-                    displayData('isp', data.connection.isp);
-
-                    // ИСПРАВЛЕНО: Добавлена проверка на существование объекта data.security
-                    const isVpn = data.security && (data.security.vpn || data.security.proxy || data.security.tor);
-                    if (isVpn) {
-                        displayData('vpn-status', 'Да, используется', 'vpn-yes');
-                    } else {
-                        displayData('vpn-status', 'Нет', 'vpn-no');
-                    }
-
-                } else {
-                    throw new Error(data.message || 'Не удалось получить данные IP');
-                }
                 
+                if (!response.ok) {
+                    throw new Error(`Ошибка сети: ${response.statusText}`);
+                }
+
+                const data = await response.json();
+
+                // Обрабатываем успешный ответ от нового API
+                displayData('ip-address', data.ipAddress);
+                displayData('location', `${data.countryName}, ${data.cityName}`);
+                displayData('isp', data.isp);
+
+                // Проверяем статус VPN/Прокси
+                if (data.isProxy) {
+                    displayData('vpn-status', 'Да, используется', 'vpn-yes');
+                } else {
+                    displayData('vpn-status', 'Нет', 'vpn-no');
+                }
+
             } catch (error) {
                 console.error("Ошибка при получении данных IP:", error);
-                const errorMessage = 'Не удалось загрузить';
-                displayData('ip-address', errorMessage);
-                displayData('location', errorMessage);
-                displayData('isp', errorMessage);
-                displayData('vpn-status', errorMessage);
+                displayError(`Ошибка: ${error.message}`);
             }
         }
 
